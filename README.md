@@ -1,177 +1,18 @@
-# Altrium-Project 
+# React + Vite
 
-> A modern full-stack application powered by **Django REST Framework** and **React** — delivering a fast, scalable, and seamless web experience.
----
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Features
+Currently, two official plugins are available:
 
-**Full-Stack Architecture**
-- Django backend with powerful APIs
-- React frontend with a smooth user experience
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-**Fast Development Setup**
-- Easy backend migration workflow
-- Hot-reload enabled React development server
+## React Compiler
 
-**Modern UI**
-- Responsive design
-- Clean and interactive frontend experience
+The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
 
-**Secure Backend**
-- Django-powered authentication and API management
+Note: This will impact Vite dev & build performances.
 
-**Scalable Structure**
-- Separated frontend and backend architecture
-- Ready for production deployment
+## Expanding the ESLint configuration
 
----
-
-# Tech Stack
-
-## Backend
-<p>
-<img src="https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white"/>
-<img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white"/>
-</p>
-
-## Frontend
-<p>
-<img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB"/>
-<img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white"/>
-<img src="https://img.shields.io/badge/NPM-CB3837?style=for-the-badge&logo=npm&logoColor=white"/>
-</p>
-
----
-
-# Project Structure
-
-```
-project-root/
-│
-├── backend/
-│   ├── manage.py
-│   ├── apps/
-│   ├── settings/
-│   └── requirements.txt
-│
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── vite.config.js
-│
-└── README.md
-```
-
----
-
-# Installation & Setup
-
-## 1. Clone Repository
-
-```bash
-git clone https://github.com/yourusername/project-name.git
-
-cd project-name
-```
-
----
-
-#Backend Setup (Django)
-
-Navigate into the backend directory:
-
-```bash
-cd backend
-```
-
-Run database migrations:
-
-```bash
-python manage.py migrate
-```
-
-Start the Django development server:
-
-```bash
-python manage.py runserver
-```
-
-Backend will be available at:
-
-```
-http://127.0.0.1:8000/
-```
-
----
-
-# Frontend Setup (React)
-
-Open another terminal and navigate to the frontend directory:
-
-```bash
-cd frontend
-```
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start React development server:
-
-```bash
-npm run dev
-```
-
-Frontend will be available at:
-
-```
-http://localhost:5173
-```
-
----
-
-# Running the Application
-
-Make sure both servers are running:
-
-| Service | URL |
-|---|---|
-| Django Backend | http://127.0.0.1:8000 |
-| React Frontend | http://localhost:5173 |
-
-Your application is now live locally 🎉
-
----
-
-# Environment Variables
-
-Create your environment files:
-
-### Backend `.env`
-
-```
-SECRET_KEY=your_secret_key
-DEBUG=True
-DATABASE_URL=your_database_url
-```
-
-### Frontend `.env`
-
-```
-VITE_API_URL=http://127.0.0.1:8000
-```
-
-# License
-
-This project is licensed under the MIT License.
-
----
-
-# Author
-
-**Malan De Mel**
-
-If you like this project, consider giving it a star⭐
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
