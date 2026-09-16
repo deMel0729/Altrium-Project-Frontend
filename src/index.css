@@ -5,36 +5,39 @@
 --------------------------------------------------------------------------- */
 
 :root {
-  --bg: #f6f7fb;
+  --bg: #f7f6f3;
   --surface: #ffffff;
-  --surface-2: #f2f3f9;
-  --surface-3: #e9ebf4;
-  --border: #e2e5ef;
-  --border-strong: #cdd2e3;
+  --surface-2: #f2f0ea;
+  --surface-3: #e9e6dd;
+  --border: #e5e2da;
+  --border-strong: #cfcabb;
 
-  --text: #1a1c25;
-  --text-muted: #666d85;
-  --text-faint: #8a90a6;
+  --text: #0c090a;
+  --text-muted: #5f5a52;
+  --text-faint: #8a847a;
 
-  --accent: #5b5bd6;
-  --accent-hover: #4a4ac4;
-  --accent-soft: #ecebff;
-  --accent-text: #4038b8;
+  --accent: #ffbf00;
+  --accent-hover: #e6ac00;
+  --accent-soft: #fff6db;
+  --accent-text: #7a5a00;
+  --accent-contrast: #0c090a;
+  --accent-2: #e09600;
+  --series-alt: #0f766e;
 
   --success: #12855b;
-  --success-soft: #dcf5e9;
-  --warn: #a4600a;
-  --warn-soft: #fdf0d9;
+  --success-soft: #dbf2e6;
+  --warn: #b45309;
+  --warn-soft: #fbead3;
   --danger: #c92a3a;
-  --danger-soft: #fde8ea;
+  --danger-soft: #fce8e9;
   --info: #1263a8;
   --info-soft: #e0eefb;
-  --neutral-soft: #eceef5;
+  --neutral-soft: #eeebe4;
 
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow-sm: 0 1px 2px rgba(16, 20, 40, 0.06), 0 1px 3px rgba(16, 20, 40, 0.04);
-  --shadow-lg: 0 18px 40px -12px rgba(16, 20, 40, 0.28);
+  --shadow-sm: 0 1px 2px rgba(12, 9, 10, 0.06), 0 1px 3px rgba(12, 9, 10, 0.04);
+  --shadow-lg: 0 18px 40px -12px rgba(12, 9, 10, 0.28);
 
   --sidebar-w: 244px;
 
@@ -52,67 +55,73 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0f1117;
-    --surface: #171a23;
-    --surface-2: #1e222d;
-    --surface-3: #272c39;
-    --border: #272b36;
-    --border-strong: #3a4052;
+    --bg: #0c090a;
+    --surface: #151113;
+    --surface-2: #1d1819;
+    --surface-3: #272021;
+    --border: #272122;
+    --border-strong: #3a3233;
 
-    --text: #eef0f6;
-    --text-muted: #a0a7bd;
-    --text-faint: #7d849b;
+    --text: #ffffff;
+    --text-muted: #a8a2a4;
+    --text-faint: #837d7f;
 
-    --accent: #8b8bf0;
-    --accent-hover: #a0a0f7;
-    --accent-soft: #262551;
-    --accent-text: #b6b6fb;
+    --accent: #ffbf00;
+    --accent-hover: #ffcf33;
+    --accent-soft: #3a2c05;
+    --accent-text: #ffcf33;
+    --accent-contrast: #0c090a;
+    --accent-2: #ff9d00;
+    --series-alt: #2dd4bf;
 
     --success: #4ad295;
     --success-soft: #10321f;
-    --warn: #eab464;
-    --warn-soft: #382a12;
+    --warn: #f59e42;
+    --warn-soft: #3a2612;
     --danger: #ff8087;
     --danger-soft: #3d1a20;
     --info: #6bb6f5;
     --info-soft: #12283d;
-    --neutral-soft: #262b38;
+    --neutral-soft: #262021;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 20px 44px -12px rgba(0, 0, 0, 0.6);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 20px 44px -12px rgba(0, 0, 0, 0.7);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #0f1117;
-  --surface: #171a23;
-  --surface-2: #1e222d;
-  --surface-3: #272c39;
-  --border: #272b36;
-  --border-strong: #3a4052;
+  --bg: #0c090a;
+  --surface: #151113;
+  --surface-2: #1d1819;
+  --surface-3: #272021;
+  --border: #272122;
+  --border-strong: #3a3233;
 
-  --text: #eef0f6;
-  --text-muted: #a0a7bd;
-  --text-faint: #7d849b;
+  --text: #ffffff;
+  --text-muted: #a8a2a4;
+  --text-faint: #837d7f;
 
-  --accent: #8b8bf0;
-  --accent-hover: #a0a0f7;
-  --accent-soft: #262551;
-  --accent-text: #b6b6fb;
+  --accent: #ffbf00;
+  --accent-hover: #ffcf33;
+  --accent-soft: #3a2c05;
+  --accent-text: #ffcf33;
+  --accent-contrast: #0c090a;
+  --accent-2: #ff9d00;
+  --series-alt: #2dd4bf;
 
   --success: #4ad295;
   --success-soft: #10321f;
-  --warn: #eab464;
-  --warn-soft: #382a12;
+  --warn: #f59e42;
+  --warn-soft: #3a2612;
   --danger: #ff8087;
   --danger-soft: #3d1a20;
   --info: #6bb6f5;
   --info-soft: #12283d;
-  --neutral-soft: #262b38;
+  --neutral-soft: #262021;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 20px 44px -12px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 44px -12px rgba(0, 0, 0, 0.7);
   color-scheme: dark;
 }
 
@@ -191,8 +200,8 @@ a { color: inherit; }
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: linear-gradient(140deg, var(--accent), #8b5cf6);
-  color: #fff;
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  color: var(--accent-contrast);
   font-weight: 700;
   font-size: 17px;
 }
@@ -258,7 +267,7 @@ a { color: inherit; }
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: linear-gradient(140deg, var(--accent), #8b5cf6);
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
 }
 
 .shell__main { min-width: 0; }
@@ -312,7 +321,7 @@ a { color: inherit; }
 .btn--primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast);
 }
 .btn--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
@@ -593,14 +602,14 @@ a { color: inherit; }
 .bars__fill--won { background: var(--success); }
 .bars__fill--lost { background: var(--text-faint); }
 .bars__fill--negotiation { background: var(--warn); }
-.bars__fill--proposal { background: #8b5cf6; }
+.bars__fill--proposal { background: var(--series-alt); }
 .bars__value { text-align: right; font-size: 13px; }
 .bars__value small { display: block; color: var(--text-faint); font-family: var(--sans); font-size: 11.5px; }
 
 .funnel { list-style: none; margin: 0; padding: 14px 18px; display: grid; gap: 12px; }
 .funnel__row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .funnel__track { display: block; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
-.funnel__fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #8b5cf6); min-width: 2px; }
+.funnel__fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); min-width: 2px; }
 
 .feed { list-style: none; margin: 0; padding: 0; }
 .feed__item {
@@ -766,7 +775,7 @@ a { color: inherit; }
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(12, 14, 24, 0.5);
+  background: rgba(12, 9, 10, 0.55);
   backdrop-filter: blur(2px);
 }
 
@@ -929,7 +938,7 @@ a { color: inherit; }
     position: fixed;
     inset: 0;
     z-index: 45;
-    background: rgba(12, 14, 24, 0.45);
+    background: rgba(12, 9, 10, 0.5);
   }
 
   .nav-burger {
