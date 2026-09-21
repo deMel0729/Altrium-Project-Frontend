@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { ROLES, useAuth } from '../auth/auth-context'
 
+// roles: when present, only those roles see the link. Hiding it is a convenience —
+// the API refuses the call regardless of what the sidebar shows.
 const NAV = [
   { to: '/', label: 'Dashboard', icon: 'grid', end: true },
   { to: '/companies', label: 'Companies', icon: 'building' },
@@ -9,7 +12,7 @@ const NAV = [
   { to: '/deals', label: 'Deals', icon: 'briefcase' },
   { to: '/engagements', label: 'Engagements', icon: 'chat' },
   { to: '/follow-ups', label: 'Follow-ups', icon: 'check' },
-  { to: '/team', label: 'Team', icon: 'users' },
+  { to: '/team', label: 'Team', icon: 'users', roles: [ROLES.LEADERSHIP] },
 ]
 
 const ICONS = {
@@ -47,6 +50,9 @@ function useTheme() {
 export function Layout() {
   const [theme, setTheme] = useTheme()
   const [navOpen, setNavOpen] = useState(false)
+  const { user, logout } = useAuth()
+
+  const visibleNav = NAV.filter((item) => !item.roles || item.roles.includes(user?.userRole))
 
   const cycleTheme = () => {
     setTheme((current) => (current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light'))
@@ -66,7 +72,7 @@ export function Layout() {
         </div>
 
         <nav className="nav">
-          {NAV.map((item) => (
+          {visibleNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -81,6 +87,16 @@ export function Layout() {
         </nav>
 
         <div className="sidebar__foot">
+          {user && (
+            <div className="whoami">
+              <span className="whoami__name">{user.name}</span>
+              <span className="whoami__role">{user.userRole}</span>
+              <button type="button" className="whoami__out" onClick={logout}>
+                Sign out
+              </button>
+            </div>
+          )}
+
           <button type="button" className="theme-toggle" onClick={cycleTheme}>
             <span className="theme-toggle__dot" aria-hidden="true" />
             Theme: {theme}

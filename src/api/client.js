@@ -1,3 +1,5 @@
+import { clearSession, getToken } from '../auth/session'
+
 const BASE_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '')
 
 export class ApiError extends Error {
@@ -29,21 +31,39 @@ function messageFrom(body, status) {
   return body.title || body.detail || `Request failed (${status})`
 }
 
-async function request(path, { method = 'GET', body, signal } = {}) {
+// Every call carries the signed token. The API re-derives the caller from it, so
+// the client never sends a user id to say who it is.
+function buildHeaders(hasBody) {
+  const headers = { Accept: 'application/json' }
+  if (hasBody) headers['Content-Type'] = 'application/json'
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  return headers
+}
+
+async function request(path, { method = 'GET', body, signal, anonymous = false } = {}) {
   let response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       signal,
-      headers: body === undefined ? { Accept: 'application/json' } : {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers: buildHeaders(body !== undefined),
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch (cause) {
     if (cause.name === 'AbortError') throw cause
     throw new ApiError(UNREACHABLE, 0, null)
+  }
+
+  // An expired or rejected token ends the session everywhere at once. Login
+  // failures are excluded: a wrong password should show an error, not sign out.
+  if (response.status === 401 && !anonymous) {
+    clearSession()
+    throw new ApiError('Your session has expired. Please sign in again.', 401, null)
+  }
+
+  if (response.status === 403) {
+    throw new ApiError('Your role does not allow that action.', 403, null)
   }
 
   if (response.status === 204) return null
@@ -66,7 +86,7 @@ async function request(path, { method = 'GET', body, signal } = {}) {
 
 export const api = {
   get: (path, options) => request(path, options),
-  post: (path, body) => request(path, { method: 'POST', body }),
+  post: (path, body, options) => request(path, { method: 'POST', body, ...options }),
   put: (path, body) => request(path, { method: 'PUT', body }),
   delete: (path) => request(path, { method: 'DELETE' }),
 }
