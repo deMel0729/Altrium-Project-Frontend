@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./public/altrium-favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/altrium-favicon.svg" />
+    <!-- iOS ignores SVG icons and will not read the manifest for one, so the
+         home-screen tile has to be a PNG named here. 180px is what current
+         iPhones ask for; smaller devices scale it down. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0c090a" />
+    <meta name="apple-mobile-web-app-title" content="Altrium" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Altrium CRM</title>
   </head>
