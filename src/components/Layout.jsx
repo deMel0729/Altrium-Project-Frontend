@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { ROLES, useAuth } from '../auth/auth-context'
+import { useAlerts } from '../alerts/alerts-context'
 import { Logo } from './Logo'
 import { AccountDialog } from './AccountDialog'
 
@@ -16,7 +17,9 @@ const NAV = [
   { to: '/leads', label: 'Leads', icon: 'spark' },
   { to: '/engagements', label: 'Engagements', icon: 'chat' },
   { to: '/deals', label: 'Deals', icon: 'briefcase' },
-  { to: '/follow-ups', label: 'Follow-ups', icon: 'check' },
+  // due: carries the count of the signed-in user's own overdue and due-today
+  // work, so it is visible from every page rather than only the dashboard.
+  { to: '/follow-ups', label: 'Follow-ups', icon: 'check', due: true },
   { to: '/team', label: 'Team', icon: 'users', roles: [ROLES.LEADERSHIP] },
   { to: '/archive', label: 'Recently deleted', icon: 'trash', roles: [ROLES.LEADERSHIP] },
 ]
@@ -59,6 +62,7 @@ export function Layout() {
   const [navOpen, setNavOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const { user, logout } = useAuth()
+  const { dueCount } = useAlerts()
 
   const visibleNav = NAV.filter((item) => !item.roles || item.roles.includes(user?.userRole))
 
@@ -85,6 +89,11 @@ export function Layout() {
             >
               <Icon name={item.icon} />
               {item.label}
+              {item.due && dueCount > 0 && (
+                <span className="nav__badge" title={`${dueCount} due now`}>
+                  {dueCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

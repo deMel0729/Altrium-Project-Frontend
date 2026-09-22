@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import { CrudPage } from '../components/CrudPage'
 import { Badge, Button } from '../components/ui'
 import { useToast } from '../hooks/useToast'
-import { companiesApi, dealsApi, followUpsApi, usersApi } from '../api/endpoints'
+import { companiesApi, dealsApi, usersApi } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
 import { useAuth } from '../auth/auth-context'
+import { useAlerts } from '../alerts/alerts-context'
 import { daysUntil, formatDate, relativeDueLabel } from '../utils/format'
 
 const VIEWS = [
@@ -16,7 +17,8 @@ const VIEWS = [
 
 export default function FollowUps() {
   const { seesEverything } = useAuth()
-  const followUps = useCollection(followUpsApi)
+  // Shared with the sidebar badge, so ticking one off here updates it at once.
+  const { collection: followUps } = useAlerts()
   const companies = useCollection(companiesApi)
   const deals = useCollection(dealsApi)
   const users = useCollection(usersApi, { enabled: seesEverything })

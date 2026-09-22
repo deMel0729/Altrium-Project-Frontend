@@ -246,6 +246,27 @@ a { color: inherit; }
 
 .nav__icon { width: 18px; height: 18px; flex-shrink: 0; }
 
+/* A plain count, like an unread badge - the number carries the urgency, so
+   this stays neutral along with every other tag in the app. */
+.nav__badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 17px;
+  text-align: center;
+}
+.nav__item.is-active .nav__badge {
+  border-color: transparent;
+  background: var(--surface);
+  color: var(--accent-text);
+}
+
 .sidebar__foot { flex-shrink: 0; border-top: 1px solid var(--border); padding-top: 12px; }
 
 .theme-toggle {
@@ -594,6 +615,29 @@ a { color: inherit; }
 .feed__item:last-child { border-bottom: 0; }
 .feed__item strong { display: block; font-size: 14px; font-weight: 600; }
 .feed__item small { display: block; margin-top: 2px; color: var(--text-faint); font-size: 12.5px; }
+
+/* ---------------------------------------------------- follow-ups by urgency -- */
+
+.due-group + .due-group { border-top: 1px solid var(--border); }
+.due-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 12px 18px 4px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.due-group__head strong { color: var(--text-muted); font-size: 12.5px; }
+.due-group__more {
+  margin: 0;
+  padding: 8px 18px 12px;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
 
 /* ------------------------------------------------------------ deal board -- */
 

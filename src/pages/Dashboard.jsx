@@ -7,12 +7,12 @@ import {
   contactsApi,
   dealsApi,
   engagementsApi,
-  followUpsApi,
   leadsApi,
   usersApi,
 } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
 import { useAuth } from '../auth/auth-context'
+import { useAlerts } from '../alerts/alerts-context'
 import { DEAL_STAGES, LEAD_STATUSES, OPEN_DEAL_STAGES } from '../constants/enums'
 import { daysUntil, formatDate, formatMoney, formatMoneyCompact, plural, relativeDueLabel } from '../utils/format'
 
@@ -23,7 +23,8 @@ export default function Dashboard() {
   const leads = useCollection(leadsApi)
   const deals = useCollection(dealsApi)
   const engagements = useCollection(engagementsApi)
-  const followUps = useCollection(followUpsApi)
+  // The same collection the sidebar badge counts, so the two never disagree.
+  const { collection: followUps } = useAlerts()
   const users = useCollection(usersApi, { enabled: seesEverything })
 
   const collections = [companies, contacts, leads, deals, engagements, followUps, users]
@@ -69,14 +70,25 @@ export default function Dashboard() {
   )
   const leadTotal = Math.max(1, leads.items.length)
 
-  const upcoming = useMemo(
-    () =>
-      followUps.items
-        .filter((row) => !row.completed)
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
-        .slice(0, 6),
-    [followUps.items],
-  )
+  // Grouped by urgency rather than listed flat: "six follow-ups sorted by date"
+  // reads the same whether they are all overdue or all a month out.
+  const dueGroups = useMemo(() => {
+    const open = followUps.items.filter((row) => !row.completed)
+    const byDue = (a, b) => new Date(a.dueDate) - new Date(b.dueDate)
+    const between = (from, to) =>
+      open
+        .filter((row) => {
+          const days = daysUntil(row.dueDate)
+          return days !== null && days >= from && days <= to
+        })
+        .sort(byDue)
+
+    return [
+      { key: 'overdue', label: 'Overdue', rows: open.filter((row) => (daysUntil(row.dueDate) ?? 0) < 0).sort(byDue) },
+      { key: 'today', label: 'Due today', rows: between(0, 0) },
+      { key: 'week', label: 'Next seven days', rows: between(1, 7) },
+    ].filter((group) => group.rows.length)
+  }, [followUps.items])
 
   const recentEngagements = useMemo(
     () => [...engagements.items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6),
@@ -204,30 +216,43 @@ export default function Dashboard() {
 
             <section className="panel">
               <header className="panel__head">
-                <h2>Next follow-ups</h2>
+                <h2>Needs attention</h2>
                 <Link className="link" to="/follow-ups">
                   See all
                 </Link>
               </header>
-              {upcoming.length ? (
-                <ul className="feed">
-                  {upcoming.map((row) => {
-                    return (
-                      <li key={row.id} className="feed__item">
-                        <div>
-                          <strong>{row.note || 'Untitled follow-up'}</strong>
-                          <small>
-                            {companyName(row.companyId)}
-                            {seesEverything && ` · ${usersById.get(row.userId)?.name ?? `User #${row.userId}`}`}
-                          </small>
-                        </div>
-                        <Badge>{relativeDueLabel(row.dueDate)}</Badge>
-                      </li>
-                    )
-                  })}
-                </ul>
+              {dueGroups.length ? (
+                <div className="due-groups">
+                  {dueGroups.map((group) => (
+                    <div key={group.key} className="due-group">
+                      <p className="due-group__head">
+                        <span>{group.label}</span>
+                        <strong>{group.rows.length}</strong>
+                      </p>
+                      <ul className="feed">
+                        {group.rows.slice(0, 4).map((row) => (
+                          <li key={row.id} className="feed__item">
+                            <div>
+                              <strong>{row.note || 'Untitled follow-up'}</strong>
+                              <small>
+                                {companyName(row.companyId)}
+                                {seesEverything && ` · ${usersById.get(row.userId)?.name ?? `User #${row.userId}`}`}
+                              </small>
+                            </div>
+                            <Badge>{relativeDueLabel(row.dueDate)}</Badge>
+                          </li>
+                        ))}
+                      </ul>
+                      {group.rows.length > 4 && (
+                        <p className="due-group__more">
+                          and {group.rows.length - 4} more
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <p className="panel__empty">No open follow-ups. Nice.</p>
+                <p className="panel__empty">Nothing due in the next week. Nice.</p>
               )}
             </section>
 

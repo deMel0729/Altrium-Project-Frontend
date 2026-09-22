@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { ToastProvider } from './components/ToastProvider'
 import { EmptyState } from './components/ui'
 import { AuthProvider } from './auth/AuthContext'
+import { AlertsProvider } from './alerts/AlertsProvider'
 import { ROLES } from './auth/auth-context'
 import { RequireAuth, RequireRole } from './auth/RequireAuth'
 import Login from './pages/Login'
@@ -29,7 +30,10 @@ export default function App() {
           <Route
             element={
               <RequireAuth>
-                <Layout />
+                {/* Inside the guard: it loads follow-ups, which needs a token. */}
+                <AlertsProvider>
+                  <Layout />
+                </AlertsProvider>
               </RequireAuth>
             }
           >
