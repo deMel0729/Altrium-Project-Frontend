@@ -1,22 +1,28 @@
 import { useMemo, useState } from 'react'
 import { CrudPage } from '../components/CrudPage'
 import { FilterSelect } from '../components/PageHeader'
-import { Badge } from '../components/ui'
-import { companiesApi, contactsApi, leadsApi, usersApi } from '../api/endpoints'
+import { Badge, Button } from '../components/ui'
+import { RecordFormModal } from '../components/RecordFormModal'
+import { useToast } from '../hooks/useToast'
+import { companiesApi, contactsApi, dealsApi, leadsApi, usersApi } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
-import { LEAD_STATUSES } from '../constants/enums'
+import { ROLES, useAuth } from '../auth/auth-context'
+import { DEAL_STAGES, LEAD_STATUSES } from '../constants/enums'
 import { formatDate } from '../utils/format'
 
 const SOURCES = ['Website', 'Referral', 'Cold Call', 'Email Campaign', 'Event', 'Partner', 'Inbound']
 
 export default function Leads() {
+  const { seesEverything, isLeadership, user: me } = useAuth()
   const leads = useCollection(leadsApi)
   const companies = useCollection(companiesApi)
   const contacts = useCollection(contactsApi)
-  const users = useCollection(usersApi)
+  const users = useCollection(usersApi, { enabled: seesEverything })
 
   const [status, setStatus] = useState('')
   const [owner, setOwner] = useState('')
+  const [converting, setConverting] = useState(null)
+  const toast = useToast()
 
   const companiesById = useMemo(() => indexById(companies.items), [companies.items])
   const contactsById = useMemo(() => indexById(contacts.items), [contacts.items])
@@ -52,18 +58,6 @@ export default function Leads() {
     { key: 'source', header: 'Source' },
     { key: 'status', header: 'Status', render: (row) => <Badge>{row.status}</Badge> },
     {
-      key: 'score',
-      header: 'Score',
-      render: (row) => (
-        <div className="score">
-          <span className="score__bar" aria-hidden="true">
-            <span className={`score__fill score__fill--${scoreTone(row.score)}`} style={{ width: `${clamp(row.score)}%` }} />
-          </span>
-          <span className="score__value">{row.score}</span>
-        </div>
-      ),
-    },
-    {
       key: 'contactId',
       header: 'Contact',
       render: (row) => (row.contactId ? contactsById.get(row.contactId)?.contactName ?? `#${row.contactId}` : '—'),
@@ -83,6 +77,15 @@ export default function Leads() {
     },
   ]
 
+  // A rep sees only their own records, so an Owner column carries no
+  // information - and the user list it needs is manager-only.
+  const visibleColumns = seesEverything ? columns : columns.filter((c) => c.key !== 'userId')
+  // A manager assigns work downwards: reps and other managers, never a
+  // leadership account. Leadership itself may assign to anyone.
+  const assignableUsers = isLeadership
+    ? users.items
+    : users.items.filter((u) => u.userRole !== ROLES.LEADERSHIP || u.id === me?.id)
+
   const fields = [
     { name: 'leadName', label: 'Lead name', type: 'text', required: true, span: 'full' },
     {
@@ -98,79 +101,118 @@ export default function Leads() {
       label: 'Primary contact',
       type: 'select',
       valueType: 'number',
-      options: contacts.items.map((contact) => ({
-        value: contact.id,
-        label: `${contact.contactName} · ${companyName(contact.companyId)}`,
-      })),
+      // Narrowed to the company chosen above: a contact belongs to one company,
+      // so offering the rest invites a lead pointing at the wrong organisation.
+      options: (values) =>
+        contacts.items
+          .filter((contact) => String(contact.companyId) === String(values.companyId))
+          .map((contact) => ({ value: contact.id, label: contact.contactName })),
       placeholder: 'None',
-      hint: 'Optional.',
+      hint: 'Optional. Lists contacts at the selected company.',
     },
     { name: 'source', label: 'Source', type: 'select', options: SOURCES, required: true },
     { name: 'status', label: 'Status', type: 'select', options: LEAD_STATUSES, required: true, defaultValue: 'New' },
-    {
-      name: 'score',
-      label: 'Score',
-      type: 'number',
-      min: 0,
-      max: 100,
-      required: true,
-      defaultValue: '50',
-      hint: '0 – 100. The API rejects anything outside that range.',
-    },
     {
       name: 'userId',
       label: 'Owner',
       type: 'select',
       valueType: 'number',
       required: true,
-      options: users.items.map((user) => ({ value: user.id, label: user.name })),
+      options: assignableUsers.map((user) => ({ value: user.id, label: `${user.name} · ${user.userRole}` })),
+      hint: isLeadership ? undefined : 'Leads can be assigned to reps and managers.',
     },
-    { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true, hint: 'Unchecking archives the lead.' },
   ]
 
+  const convertFields = [
+    { name: 'dealName', label: 'Deal name', type: 'text', required: true, span: 'full' },
+    { name: 'dealValue', label: 'Value (USD)', type: 'money', min: 0, required: true, defaultValue: '0' },
+    { name: 'expectedCloseDate', label: 'Expected close date', type: 'date', required: true },
+    { name: 'stage', label: 'Stage', type: 'select', options: DEAL_STAGES, required: true, defaultValue: 'Prospecting' },
+  ]
+
+  // One button: create the deal from this lead, then mark the lead Qualified so
+  // the funnel still counts it and the link between the two stays traceable.
+  const convert = async (payload) => {
+    const lead = converting
+    await dealsApi.create({
+      ...payload,
+      companyId: lead.companyId,
+      contactId: lead.contactId ?? null,
+      leadId: lead.id,
+      userId: lead.userId,
+    })
+    if (lead.status !== 'Qualified') {
+      await leads.update(lead.id, { ...lead, status: 'Qualified' })
+    } else {
+      await leads.refresh()
+    }
+    setConverting(null)
+    toast.notify(`${lead.leadName} converted to a deal.`)
+  }
+
   return (
-    <CrudPage
-      title="Leads"
-      subtitle="Inbound and outbound interest, scored and triaged."
-      entityName="lead"
-      collection={leads}
-      rows={rows}
-      columns={columns}
-      fields={fields}
-      labelOf={(row) => row.leadName}
-      searchText={(row) => `${row.leadName} ${row.source} ${row.status} ${companyName(row.companyId)}`}
-      initialSort={{ key: 'score', direction: 'desc' }}
-      createDisabled={!companies.loading && !users.loading && (!companies.items.length || !users.items.length)}
-      createDisabledReason="Leads need an existing company and owner."
-      aside={
-        <div className="pill-strip">
-          {LEAD_STATUSES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={`pill${status === value ? ' is-active' : ''}`}
-              onClick={() => setStatus(status === value ? '' : value)}
-              aria-pressed={status === value}
-              aria-label={`${value} leads: ${counts[value]}`}
-            >
-              <Badge>{value}</Badge>
-              <strong>{counts[value]}</strong>
-            </button>
-          ))}
-        </div>
-      }
-      filters={
-        <FilterSelect
-          label="Owner"
-          value={owner}
-          onChange={setOwner}
-          options={users.items.map((user) => ({ value: String(user.id), label: user.name }))}
-          allLabel="All owners"
+    <>
+      <CrudPage
+        title="Leads"
+        subtitle="Inbound and outbound interest, tracked and triaged."
+        entityName="lead"
+        collection={leads}
+        rows={rows}
+        columns={visibleColumns}
+        fields={fields}
+        labelOf={(row) => row.leadName}
+        searchText={(row) => `${row.leadName} ${row.source} ${row.status} ${companyName(row.companyId)}`}
+        initialSort={{ key: 'updatedAt', direction: 'desc' }}
+        canCreate={seesEverything}
+        canDelete={seesEverything}
+        extraRowActions={(row) =>
+          row.status === 'Lost' ? null : (
+            <Button size="sm" onClick={() => setConverting(row)}>
+              Convert
+            </Button>
+          )
+        }
+        createDisabled={!companies.loading && !users.loading && (!companies.items.length || !users.items.length)}
+        createDisabledReason="Leads need an existing company and owner."
+        aside={
+          <div className="pill-strip">
+            {LEAD_STATUSES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={`pill${status === value ? ' is-active' : ''}`}
+                onClick={() => setStatus(status === value ? '' : value)}
+                aria-pressed={status === value}
+                aria-label={`${value} leads: ${counts[value]}`}
+              >
+                <Badge>{value}</Badge>
+                <strong>{counts[value]}</strong>
+              </button>
+            ))}
+          </div>
+        }
+        filters={seesEverything ? (
+          <FilterSelect
+            label="Owner"
+            value={owner}
+            onChange={setOwner}
+            options={users.items.map((user) => ({ value: String(user.id), label: user.name }))}
+            allLabel="All owners"
+          />
+        ) : undefined}
+      />
+
+      {converting && (
+        <RecordFormModal
+          title={`Convert "${converting.leadName}" to a deal`}
+          subtitle={companyName(converting.companyId)}
+          fields={convertFields}
+          record={{ dealName: converting.leadName }}
+          submitLabel="Create deal"
+          onSubmit={convert}
+          onClose={() => setConverting(null)}
         />
-      }
-    />
+      )}
+    </>
   )
 }
-
-const clamp = (score) => Math.min(100, Math.max(0, Number(score) || 0))
-const scoreTone = (score) => (score >= 70 ? 'high' : score >= 40 ? 'mid' : 'low')

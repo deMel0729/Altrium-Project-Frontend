@@ -6,12 +6,25 @@ import { fromDateInput, toDateInput } from '../utils/format'
 //   { name, label, type, options?, required?, hint?, min?, max?, placeholder?, span? }
 // `type` is one of: text | email | url | tel | password | number | money |
 //                   date | select | textarea | checkbox
+//
+// `options` is either an array, or a function of the current form values for a
+// select whose choices depend on another field - the contact list narrowing to
+// the company that was picked, for example.
+
+const optionValue = (option) => (typeof option === 'string' ? option : option.value)
+const optionLabel = (option) => (typeof option === 'string' ? option : option.label)
+
+function resolveOptions(field, values) {
+  if (typeof field.options === 'function') return field.options(values) ?? []
+  return field.options ?? []
+}
 
 function initialValue(field, record) {
+  const fallback = typeof field.defaultValue === 'function' ? field.defaultValue(record) : field.defaultValue
   const existing = record ? record[field.name] : undefined
-  if (field.type === 'checkbox') return existing ?? field.defaultValue ?? false
-  if (field.type === 'date') return toDateInput(existing) || (field.defaultValue ?? '')
-  if (existing === null || existing === undefined) return field.defaultValue ?? ''
+  if (field.type === 'checkbox') return existing ?? fallback ?? false
+  if (field.type === 'date') return toDateInput(existing) || (fallback ?? '')
+  if (existing === null || existing === undefined) return fallback ?? ''
   return String(existing)
 }
 
@@ -19,7 +32,7 @@ function buildInitialState(fields, record) {
   return Object.fromEntries(fields.map((field) => [field.name, initialValue(field, record)]))
 }
 
-function validateField(field, value) {
+function validateField(field, value, values) {
   const isBlank = value === '' || value === null || value === undefined
   if (field.required && (isBlank || (field.type === 'select' && value === ''))) {
     return `${field.label} is required.`
@@ -34,13 +47,16 @@ function validateField(field, value) {
     if (field.min !== undefined && numeric < field.min) return `${field.label} cannot be below ${field.min}.`
     if (field.max !== undefined && numeric > field.max) return `${field.label} cannot exceed ${field.max}.`
   }
-  return field.validate ? field.validate(value) : null
+  return field.validate ? field.validate(value, values) : null
 }
 
 // Turns form strings back into the shapes the C# models expect.
 function serialize(fields, values) {
   const payload = {}
   for (const field of fields) {
+    // `transient` fields steer the form only - a Lead/Deal chooser, say - and are
+    // never part of the request body.
+    if (field.transient) continue
     const value = values[field.name]
     if (field.type === 'checkbox') {
       payload[field.name] = Boolean(value)
@@ -65,7 +81,25 @@ export function RecordFormModal({ title, subtitle, fields, record, onSubmit, onC
   const [saving, setSaving] = useState(false)
 
   const setValue = (name, value) => {
-    setValues((current) => ({ ...current, [name]: value }))
+    setValues((current) => {
+      const next = { ...current, [name]: value }
+
+      // A dependent select can be left holding a value its options no longer
+      // offer - pick a contact at company A, then switch to company B. Clearing
+      // it here stops a mismatched id being submitted while the form still
+      // displays the old selection.
+      for (const field of fields) {
+        if (field.name === name || typeof field.options !== 'function') continue
+        const chosen = next[field.name]
+        if (chosen === '' || chosen === null || chosen === undefined) continue
+        const allowed = resolveOptions(field, next).map(optionValue)
+        if (!allowed.some((candidate) => String(candidate) === String(chosen))) {
+          next[field.name] = ''
+        }
+      }
+
+      return next
+    })
     setErrors((current) => (current[name] ? { ...current, [name]: null } : current))
   }
 
@@ -73,7 +107,7 @@ export function RecordFormModal({ title, subtitle, fields, record, onSubmit, onC
     event.preventDefault()
     const nextErrors = {}
     for (const field of fields) {
-      const message = validateField(field, values[field.name])
+      const message = validateField(field, values[field.name], values)
       if (message) nextErrors[field.name] = message
     }
     setErrors(nextErrors)
@@ -126,7 +160,7 @@ export function RecordFormModal({ title, subtitle, fields, record, onSubmit, onC
             ) : (
               <Field label={field.label} hint={field.hint} error={errors[field.name]} required={field.required}>
                 {(id) => (
-                  <Control id={id} field={field} value={values[field.name]} onChange={setValue} />
+                  <Control id={id} field={field} value={values[field.name]} values={values} onChange={setValue} />
                 )}
               </Field>
             )}
@@ -139,7 +173,7 @@ export function RecordFormModal({ title, subtitle, fields, record, onSubmit, onC
   )
 }
 
-function Control({ id, field, value, onChange }) {
+function Control({ id, field, value, values, onChange }) {
   const common = {
     id,
     value,
@@ -148,18 +182,15 @@ function Control({ id, field, value, onChange }) {
   }
 
   if (field.type === 'select') {
+    const options = resolveOptions(field, values)
     return (
       <select className="input input--select" {...common}>
         <option value="">{field.placeholder ?? 'Select…'}</option>
-        {field.options.map((option) => {
-          const optionValue = typeof option === 'string' ? option : option.value
-          const optionLabel = typeof option === 'string' ? option : option.label
-          return (
-            <option key={optionValue} value={optionValue}>
-              {optionLabel}
-            </option>
-          )
-        })}
+        {options.map((option) => (
+          <option key={optionValue(option)} value={optionValue(option)}>
+            {optionLabel(option)}
+          </option>
+        ))}
       </select>
     )
   }

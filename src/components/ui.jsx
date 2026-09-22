@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef } from 'react'
-import { TONES } from '../constants/enums'
 
-export function Badge({ children, tone }) {
-  const resolved = tone ?? TONES[children] ?? 'neutral'
-  return <span className={`badge badge--${resolved}`}>{children}</span>
+// Every badge is neutral. Stage, status, type, role, due date - they are all
+// labels, and colouring them turns a table into a traffic light. Urgency is
+// carried by the wording ("3 days overdue") and by sort order instead.
+export function Badge({ children }) {
+  return <span className="badge badge--neutral">{children}</span>
 }
 
 export function Button({ variant = 'secondary', size, className = '', ...props }) {
@@ -23,7 +24,6 @@ export function Spinner({ label = 'Loading' }) {
 export function EmptyState({ title, description, action }) {
   return (
     <div className="empty">
-      <div className="empty__mark" aria-hidden="true" />
       <h3>{title}</h3>
       {description && <p>{description}</p>}
       {action}

@@ -3,16 +3,24 @@ import { CrudPage } from '../components/CrudPage'
 import { Badge } from '../components/ui'
 import { companiesApi, usersApi } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
-import { formatDate, initials } from '../utils/format'
+import { ROLES, useAuth } from '../auth/auth-context'
+import { formatDate } from '../utils/format'
 
 export default function Companies() {
+  // seesEverything is true for managers and leadership - the same split the API uses.
+  const { seesEverything, isLeadership, user: me } = useAuth()
   const companies = useCollection(companiesApi)
-  const users = useCollection(usersApi)
+  const users = useCollection(usersApi, { enabled: seesEverything })
 
   const usersById = useMemo(() => indexById(users.items), [users.items])
+  // A manager assigns work downwards: reps and other managers, never a
+  // leadership account. Mirrors what the API enforces.
   const ownerOptions = useMemo(
-    () => users.items.map((user) => ({ value: user.id, label: `${user.name} · ${user.userRole}` })),
-    [users.items],
+    () =>
+      users.items
+        .filter((user) => isLeadership || user.userRole !== ROLES.LEADERSHIP || user.id === me?.id)
+        .map((user) => ({ value: user.id, label: `${user.name} · ${user.userRole}` })),
+    [users.items, isLeadership, me?.id],
   )
 
   const columns = [
@@ -20,14 +28,9 @@ export default function Companies() {
       key: 'companyName',
       header: 'Company',
       render: (row) => (
-        <div className="cell-identity">
-          <span className="avatar" aria-hidden="true">
-            {initials(row.companyName)}
-          </span>
-          <div>
-            <strong>{row.companyName}</strong>
-            <small>{row.email || 'No email'}</small>
-          </div>
+        <div>
+          <strong>{row.companyName}</strong>
+          <small className="cell-sub">{row.email || 'No email'}</small>
         </div>
       ),
     },
@@ -48,7 +51,7 @@ export default function Companies() {
     {
       key: 'userId',
       header: 'Owner',
-      render: (row) => usersById.get(row.userId)?.name ?? <Badge tone="neutral">#{row.userId}</Badge>,
+      render: (row) => usersById.get(row.userId)?.name ?? <Badge>#{row.userId}</Badge>,
       sortValue: (row) => usersById.get(row.userId)?.name ?? '',
     },
     {
@@ -59,6 +62,9 @@ export default function Companies() {
     },
   ]
 
+  // A rep sees only their own records, so an Owner column carries no
+  // information - and the user list it needs is manager-only.
+  const visibleColumns = seesEverything ? columns : columns.filter((c) => c.key !== 'userId')
   const fields = [
     { name: 'companyName', label: 'Company name', type: 'text', required: true, span: 'full' },
     { name: 'industry', label: 'Industry', type: 'text', placeholder: 'e.g. Manufacturing' },
@@ -75,7 +81,6 @@ export default function Companies() {
       options: ownerOptions,
       hint: ownerOptions.length ? undefined : 'Add a team member first — the API requires a valid user id.',
     },
-    { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true, hint: 'Unchecking archives the company.' },
   ]
 
   return (
@@ -84,11 +89,14 @@ export default function Companies() {
       subtitle="Accounts your team sells into."
       entityName="company"
       collection={companies}
-      columns={columns}
+      columns={visibleColumns}
       fields={fields}
       labelOf={(row) => row.companyName}
       searchText={(row) => `${row.companyName} ${row.industry} ${row.email} ${row.phone} ${row.website}`}
       initialSort={{ key: 'companyName', direction: 'asc' }}
+      canCreate={seesEverything}
+      canEdit={seesEverything}
+      canDelete={seesEverything}
       createDisabled={!users.loading && ownerOptions.length === 0}
       createDisabledReason="Add a team member first — companies need an owner."
     />

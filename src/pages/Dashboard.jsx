@@ -12,17 +12,19 @@ import {
   usersApi,
 } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
+import { useAuth } from '../auth/auth-context'
 import { DEAL_STAGES, LEAD_STATUSES, OPEN_DEAL_STAGES } from '../constants/enums'
 import { daysUntil, formatDate, formatMoney, formatMoneyCompact, plural, relativeDueLabel } from '../utils/format'
 
 export default function Dashboard() {
+  const { seesEverything } = useAuth()
   const companies = useCollection(companiesApi)
   const contacts = useCollection(contactsApi)
   const leads = useCollection(leadsApi)
   const deals = useCollection(dealsApi)
   const engagements = useCollection(engagementsApi)
   const followUps = useCollection(followUpsApi)
-  const users = useCollection(usersApi)
+  const users = useCollection(usersApi, { enabled: seesEverything })
 
   const collections = [companies, contacts, leads, deals, engagements, followUps, users]
   const loading = collections.some((collection) => collection.loading)
@@ -132,7 +134,6 @@ export default function Dashboard() {
               label="Won this period"
               value={formatMoneyCompact(stats.wonValue)}
               hint={`${plural(stats.won.length, 'deal')} closed won`}
-              tone="success"
               to="/deals"
             />
             <StatCard
@@ -145,7 +146,6 @@ export default function Dashboard() {
               label="Overdue follow-ups"
               value={overdue}
               hint={overdue ? 'Needs attention today' : 'Everything on schedule'}
-              tone={overdue ? 'danger' : 'neutral'}
               to="/follow-ups"
             />
             <StatCard label="Accounts" value={companies.items.length} hint={plural(contacts.items.length, 'contact')} to="/companies" />
@@ -212,16 +212,16 @@ export default function Dashboard() {
               {upcoming.length ? (
                 <ul className="feed">
                   {upcoming.map((row) => {
-                    const days = daysUntil(row.dueDate)
                     return (
                       <li key={row.id} className="feed__item">
                         <div>
                           <strong>{row.note || 'Untitled follow-up'}</strong>
                           <small>
-                            {companyName(row.companyId)} · {usersById.get(row.userId)?.name ?? `User #${row.userId}`}
+                            {companyName(row.companyId)}
+                            {seesEverything && ` · ${usersById.get(row.userId)?.name ?? `User #${row.userId}`}`}
                           </small>
                         </div>
-                        <Badge tone={days < 0 ? 'danger' : days <= 2 ? 'warn' : 'info'}>{relativeDueLabel(row.dueDate)}</Badge>
+                        <Badge>{relativeDueLabel(row.dueDate)}</Badge>
                       </li>
                     )
                   })}
@@ -263,11 +263,11 @@ export default function Dashboard() {
   )
 }
 
-function StatCard({ label, value, hint, tone = 'neutral', to }) {
+function StatCard({ label, value, hint, to }) {
   const content = (
     <>
       <span className="stat__label">{label}</span>
-      <strong className={`stat__value stat__value--${tone}`}>{value}</strong>
+      <strong className="stat__value">{value}</strong>
       {hint && <small className="stat__hint">{hint}</small>}
     </>
   )

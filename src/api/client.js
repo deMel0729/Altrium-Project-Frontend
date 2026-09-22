@@ -28,7 +28,14 @@ function messageFrom(body, status) {
     const flat = Object.values(body.errors).flat().filter(Boolean)
     if (flat.length) return flat.join(' ')
   }
-  return body.title || body.detail || `Request failed (${status})`
+  // The API's own wording first - "Invalid email or password." reads better than
+  // "Request failed (401)". title/detail cover ASP.NET's ProblemDetails shape.
+  return (
+    body.message ||
+    body.title ||
+    body.detail ||
+    (status === 401 ? 'Invalid email or password.' : `Something went wrong (${status}).`)
+  )
 }
 
 // Every call carries the signed token. The API re-derives the caller from it, so

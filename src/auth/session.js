@@ -38,6 +38,15 @@ export function saveSession(token, user) {
   }
 }
 
+// Used after a profile edit: the token is unchanged, only the cached user is.
+export function saveUser(user) {
+  try {
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user))
+  } catch {
+    // ignore
+  }
+}
+
 export function clearSession() {
   try {
     sessionStorage.removeItem(TOKEN_KEY)

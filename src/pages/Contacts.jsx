@@ -3,9 +3,11 @@ import { CrudPage } from '../components/CrudPage'
 import { FilterSelect } from '../components/PageHeader'
 import { companiesApi, contactsApi } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
-import { formatDate, initials } from '../utils/format'
+import { useAuth } from '../auth/auth-context'
+import { formatDate } from '../utils/format'
 
 export default function Contacts() {
+  const { seesEverything } = useAuth()
   const contacts = useCollection(contactsApi)
   const companies = useCollection(companiesApi)
   const [companyFilter, setCompanyFilter] = useState('')
@@ -28,14 +30,9 @@ export default function Contacts() {
       key: 'contactName',
       header: 'Contact',
       render: (row) => (
-        <div className="cell-identity">
-          <span className="avatar" aria-hidden="true">
-            {initials(row.contactName)}
-          </span>
-          <div>
-            <strong>{row.contactName}</strong>
-            <small>{row.position || 'No title'}</small>
-          </div>
+        <div>
+          <strong>{row.contactName}</strong>
+          <small className="cell-sub">{row.position || 'No title'}</small>
         </div>
       ),
     },
@@ -80,7 +77,6 @@ export default function Contacts() {
     },
     { name: 'email', label: 'Email', type: 'email', required: true },
     { name: 'phone', label: 'Phone', type: 'tel', nullable: true },
-    { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true, hint: 'Unchecking archives the contact.' },
   ]
 
   return (
@@ -95,6 +91,7 @@ export default function Contacts() {
       labelOf={(row) => row.contactName}
       searchText={(row) => `${row.contactName} ${row.email} ${row.position} ${nameOf(row.companyId)}`}
       initialSort={{ key: 'contactName', direction: 'asc' }}
+      canDelete={seesEverything}
       createDisabled={!companies.loading && companyOptions.length === 0}
       createDisabledReason="Create a company first — contacts belong to one."
       filters={

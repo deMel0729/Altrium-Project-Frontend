@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { CrudPage } from '../components/CrudPage'
 import { Badge, Button } from '../components/ui'
 import { useToast } from '../hooks/useToast'
-import { companiesApi, dealsApi, followUpsApi, leadsApi, usersApi } from '../api/endpoints'
+import { companiesApi, dealsApi, followUpsApi, usersApi } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
+import { useAuth } from '../auth/auth-context'
 import { daysUntil, formatDate, relativeDueLabel } from '../utils/format'
 
 const VIEWS = [
@@ -14,11 +15,11 @@ const VIEWS = [
 ]
 
 export default function FollowUps() {
+  const { seesEverything } = useAuth()
   const followUps = useCollection(followUpsApi)
   const companies = useCollection(companiesApi)
   const deals = useCollection(dealsApi)
-  const leads = useCollection(leadsApi)
-  const users = useCollection(usersApi)
+  const users = useCollection(usersApi, { enabled: seesEverything })
   const toast = useToast()
 
   const [view, setView] = useState('open')
@@ -91,16 +92,14 @@ export default function FollowUps() {
     {
       key: 'dueDate',
       header: 'Due',
-      render: (row) => {
-        const days = daysUntil(row.dueDate)
-        const tone = row.completed ? 'neutral' : days < 0 ? 'danger' : days <= 2 ? 'warn' : 'info'
-        return (
-          <div>
-            <Badge tone={tone}>{relativeDueLabel(row.dueDate)}</Badge>
-            <small className="cell-sub">{formatDate(row.dueDate)}</small>
-          </div>
-        )
-      },
+      render: (row) => (
+        <div>
+          {/* The wording carries the urgency - "3 days overdue" says more than a
+              red pill, and the list sorts by date anyway. */}
+          <Badge>{relativeDueLabel(row.dueDate)}</Badge>
+          <small className="cell-sub">{formatDate(row.dueDate)}</small>
+        </div>
+      ),
       sortValue: (row) => new Date(row.dueDate).getTime(),
     },
     {
@@ -117,43 +116,43 @@ export default function FollowUps() {
     },
   ]
 
+  // A rep sees only their own records, so an Owner column carries no
+  // information - and the user list it needs is manager-only.
+  const visibleColumns = seesEverything ? columns : columns.filter((c) => c.key !== 'userId')
+  // A follow-up needs an open deal and nothing else: the company and lead come
+  // from that deal, and the owner comes from the token.
+  const openDeals = deals.items.filter((deal) => deal.stage !== 'Lost')
+
   const fields = [
     { name: 'note', label: 'Note', type: 'textarea', required: true, span: 'full', placeholder: 'What needs to happen next?' },
     { name: 'dueDate', label: 'Due date', type: 'date', required: true },
-    {
-      name: 'userId',
-      label: 'Assignee',
-      type: 'select',
-      valueType: 'number',
-      required: true,
-      options: users.items.map((user) => ({ value: user.id, label: user.name })),
-    },
-    {
-      name: 'companyId',
-      label: 'Company',
-      type: 'select',
-      valueType: 'number',
-      required: true,
-      options: companies.items.map((company) => ({ value: company.id, label: company.companyName })),
-    },
     {
       name: 'dealId',
       label: 'Deal',
       type: 'select',
       valueType: 'number',
       required: true,
-      options: deals.items.map((deal) => ({ value: deal.id, label: `${deal.dealName} · ${deal.stage}` })),
+      // Lost deals are left out: there is nothing left to chase, and the API
+      // refuses them anyway. Company and lead come from the deal, so they are
+      // not asked for here.
+      options: openDeals.map((deal) => ({ value: deal.id, label: `${deal.dealName} · ${deal.stage}` })),
+      hint: 'The next action on this deal. Lost deals are not listed.',
     },
-    {
-      name: 'leadId',
-      label: 'Lead',
-      type: 'select',
-      valueType: 'number',
-      required: true,
-      options: leads.items.map((lead) => ({ value: lead.id, label: `${lead.leadName} · ${lead.status}` })),
-    },
+    // Managers may set a reminder for a rep; for a rep the API takes the owner
+    // from the token, so the field would only ever say their own name.
+    ...(seesEverything
+      ? [
+          {
+            name: 'userId',
+            label: 'Assignee',
+            type: 'select',
+            valueType: 'number',
+            required: true,
+            options: users.items.map((user) => ({ value: user.id, label: user.name })),
+          },
+        ]
+      : []),
     { name: 'completed', label: 'Completed', type: 'checkbox', defaultValue: false },
-    { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true, hint: 'Unchecking archives the follow-up.' },
   ]
 
   return (
@@ -163,15 +162,14 @@ export default function FollowUps() {
       entityName="follow-up"
       collection={followUps}
       rows={rows}
-      columns={columns}
+      columns={visibleColumns}
       fields={fields}
       labelOf={(row) => row.note || `Follow-up #${row.id}`}
       searchText={(row) => `${row.note} ${companyName(row.companyId)} ${ownerName(row.userId)}`}
       initialSort={{ key: 'dueDate', direction: 'asc' }}
-      createDisabled={
-        !followUps.loading && (!deals.items.length || !leads.items.length || !companies.items.length || !users.items.length)
-      }
-      createDisabledReason="Follow-ups need an existing company, deal, lead and assignee."
+      canDelete={seesEverything}
+      createDisabled={!followUps.loading && !openDeals.length}
+      createDisabledReason="You need an open deal before you can set a follow-up on it."
       aside={
         <div className="pill-strip">
           {VIEWS.map((item) => (

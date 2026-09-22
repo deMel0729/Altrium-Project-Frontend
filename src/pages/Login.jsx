@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/auth-context'
 import { Button, Field } from '../components/ui'
+import { Logo } from '../components/Logo'
+import officePhoto from '../assets/login-office.jpg'
 
 export default function Login() {
   const { login } = useAuth()
@@ -34,15 +36,22 @@ export default function Login() {
 
   return (
     <div className="login">
+      {/* Desktop only - CSS hides this below 900px, so the phone layout is
+          unchanged. Edit the two lines of copy below to change the panel text. */}
+      <aside className="login__art">
+        <img className="login__art-img" src={officePhoto} alt="" />
+        <div className="login__art-overlay">
+          <p className="login__art-welcome">Welcome back</p>
+          <blockquote className="login__art-quote">
+            “The deal you close next quarter starts with a follow up someone
+            remembered to make this week.”
+          </blockquote>
+        </div>
+      </aside>
+
       <form className="login__card" onSubmit={onSubmit}>
         <div className="login__brand">
-          <span className="brand__mark" aria-hidden="true">
-            A
-          </span>
-          <span className="brand__text">
-            Altrium
-            <small>CRM</small>
-          </span>
+          <Logo className="login__logo" />
         </div>
 
         <h1 className="login__title">Sign in</h1>

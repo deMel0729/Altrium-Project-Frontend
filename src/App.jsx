@@ -14,6 +14,7 @@ import Deals from './pages/Deals'
 import Engagements from './pages/Engagements'
 import FollowUps from './pages/FollowUps'
 import Team from './pages/Team'
+import Archive from './pages/Archive'
 
 export default function App() {
   return (
@@ -44,6 +45,14 @@ export default function App() {
               element={
                 <RequireRole roles={[ROLES.LEADERSHIP]}>
                   <Team />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="archive"
+              element={
+                <RequireRole roles={[ROLES.LEADERSHIP]}>
+                  <Archive />
                 </RequireRole>
               }
             />

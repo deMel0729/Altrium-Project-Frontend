@@ -24,6 +24,17 @@ export function CrudPage({
   aside,
   createDisabled,
   createDisabledReason,
+  // Role gates. These mirror what the API enforces - hiding a button the server
+  // would refuse anyway, so the screen matches what the user can actually do.
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  // Extra per-row buttons, e.g. "Convert" on a lead.
+  extraRowActions,
+  // Creating sometimes needs a different schema and a different endpoint than
+  // editing - a new team member takes a password, an existing one never does.
+  createFields,
+  onCreate,
   // Optional second view (e.g. the deal pipeline board). When `alternateActive`
   // is true this replaces the table but keeps the shared create/edit/delete flow.
   renderAlternate,
@@ -45,7 +56,12 @@ export function CrudPage({
 
   const save = async (payload) => {
     if (editing === 'new') {
-      await collection.create(payload)
+      if (onCreate) {
+        await onCreate(payload)
+        await collection.refresh()
+      } else {
+        await collection.create(payload)
+      }
       toast.notify(`${capitalize(entityName)} created.`)
     } else {
       await collection.update(editing.id, { ...editing, ...payload })
@@ -71,9 +87,11 @@ export function CrudPage({
     <>
       <PageHeader title={title} subtitle={subtitle}>
         {headerExtras}
-        <Button variant="primary" onClick={() => setEditing('new')} disabled={createDisabled} title={createDisabled ? createDisabledReason : undefined}>
-          New {entityName}
-        </Button>
+        {canCreate && (
+          <Button variant="primary" onClick={() => setEditing('new')} disabled={createDisabled} title={createDisabled ? createDisabledReason : undefined}>
+            New {entityName}
+          </Button>
+        )}
       </PageHeader>
 
       {aside}
@@ -106,7 +124,7 @@ export function CrudPage({
                     : `Create your first ${entityName} to see it listed here.`
                 }
                 action={
-                  !source.length && !createDisabled ? (
+                  !source.length && !createDisabled && canCreate ? (
                     <Button variant="primary" onClick={() => setEditing('new')}>
                       New {entityName}
                     </Button>
@@ -114,16 +132,25 @@ export function CrudPage({
                 }
               />
             }
-            rowActions={(row) => (
-              <>
-                <Button size="sm" onClick={() => setEditing(row)}>
-                  Edit
-                </Button>
-                <Button size="sm" variant="ghost-danger" onClick={() => setDeleting(row)}>
-                  Delete
-                </Button>
-              </>
-            )}
+            rowActions={
+              canEdit || canDelete || extraRowActions
+                ? (row) => (
+                    <>
+                      {extraRowActions?.(row)}
+                      {canEdit && (
+                        <Button size="sm" onClick={() => setEditing(row)}>
+                          Edit
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button size="sm" variant="ghost-danger" onClick={() => setDeleting(row)}>
+                          Delete
+                        </Button>
+                      )}
+                    </>
+                  )
+                : undefined
+            }
           />
         </section>
       )}
@@ -132,7 +159,7 @@ export function CrudPage({
         <RecordFormModal
           title={editing === 'new' ? `New ${entityName}` : `Edit ${labelOf(editing)}`}
           subtitle={editing === 'new' ? undefined : `Record #${editing.id}`}
-          fields={fields}
+          fields={editing === 'new' ? createFields ?? fields : fields}
           record={editing === 'new' ? null : editing}
           onSubmit={save}
           onClose={() => setEditing(null)}

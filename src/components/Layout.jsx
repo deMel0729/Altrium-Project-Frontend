@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { ROLES, useAuth } from '../auth/auth-context'
+import { Logo } from './Logo'
+import { AccountDialog } from './AccountDialog'
 
 // roles: when present, only those roles see the link. Hiding it is a convenience —
 // the API refuses the call regardless of what the sidebar shows.
+// Ordered to follow the way the work actually runs: the accounts you sell into,
+// then a lead, the conversations that qualify it, the deal it becomes, and the
+// reminder to chase it.
 const NAV = [
   { to: '/', label: 'Dashboard', icon: 'grid', end: true },
   { to: '/companies', label: 'Companies', icon: 'building' },
   { to: '/contacts', label: 'Contacts', icon: 'user' },
   { to: '/leads', label: 'Leads', icon: 'spark' },
-  { to: '/deals', label: 'Deals', icon: 'briefcase' },
   { to: '/engagements', label: 'Engagements', icon: 'chat' },
+  { to: '/deals', label: 'Deals', icon: 'briefcase' },
   { to: '/follow-ups', label: 'Follow-ups', icon: 'check' },
   { to: '/team', label: 'Team', icon: 'users', roles: [ROLES.LEADERSHIP] },
+  { to: '/archive', label: 'Recently deleted', icon: 'trash', roles: [ROLES.LEADERSHIP] },
 ]
 
 const ICONS = {
@@ -23,6 +29,7 @@ const ICONS = {
   briefcase: 'M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zM9 8V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 13h18',
   chat: 'M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5Z',
   check: 'M4 7h9M4 12h6M4 17h6M14 16l2.5 2.5L21 14',
+  trash: 'M4 7h16M10 11v6M14 11v6M5 7l1 13a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3',
   users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2 20a7 7 0 0 1 14 0M17 5.2a3.5 3.5 0 0 1 0 6.6M18 14.3A6 6 0 0 1 22 20',
 }
 
@@ -50,6 +57,7 @@ function useTheme() {
 export function Layout() {
   const [theme, setTheme] = useTheme()
   const [navOpen, setNavOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const { user, logout } = useAuth()
 
   const visibleNav = NAV.filter((item) => !item.roles || item.roles.includes(user?.userRole))
@@ -62,13 +70,8 @@ export function Layout() {
     <div className={`shell${navOpen ? ' shell--nav-open' : ''}`}>
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand__mark" aria-hidden="true">
-            A
-          </span>
-          <span className="brand__text">
-            Altrium
-            <small>CRM</small>
-          </span>
+          <Logo className="brand__logo" />
+          <span className="brand__sub">CRM</span>
         </div>
 
         <nav className="nav">
@@ -89,8 +92,27 @@ export function Layout() {
         <div className="sidebar__foot">
           {user && (
             <div className="whoami">
-              <span className="whoami__name">{user.name}</span>
-              <span className="whoami__role">{user.userRole}</span>
+              <button
+                type="button"
+                className="whoami__who"
+                onClick={() => setAccountOpen(true)}
+                title="Your account"
+              >
+                <span className="whoami__identity">
+                  <span className="whoami__name">{user.name}</span>
+                  <span className="whoami__role">{user.userRole}</span>
+                </span>
+                <svg className="whoami__edit" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z M14 7l3 3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
               <button type="button" className="whoami__out" onClick={logout}>
                 Sign out
               </button>
@@ -117,6 +139,8 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
 
       <div
         className="shell__scrim"

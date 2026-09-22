@@ -21,6 +21,29 @@ export function formatDate(value) {
   return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+// The API stores UTC (DateTime.UtcNow) and serialises it without a timezone
+// suffix, so "2026-09-22T09:15:00" would be read as local time and displayed
+// hours out. Treat an unqualified timestamp as UTC.
+function asUtcDate(value) {
+  if (!value) return null
+  const text =
+    typeof value === 'string' && !/([zZ]|[+-]\d{2}:?\d{2})$/.test(value) ? `${value}Z` : value
+  const date = new Date(text)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export function formatDateTime(value) {
+  const date = asUtcDate(value)
+  if (!date) return '—'
+  return date.toLocaleString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 // <input type="date"> needs a plain yyyy-mm-dd string, not an ISO timestamp.
 export function toDateInput(value) {
   if (!value) return ''
@@ -58,11 +81,3 @@ export function relativeDueLabel(value) {
   if (days === -1) return 'Yesterday'
   return days < 0 ? `${Math.abs(days)} days overdue` : `In ${days} days`
 }
-
-export const initials = (name) =>
-  (name || '?')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')

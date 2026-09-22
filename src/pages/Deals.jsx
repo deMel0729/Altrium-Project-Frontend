@@ -5,15 +5,17 @@ import { Badge, Button, Spinner } from '../components/ui'
 import { useToast } from '../hooks/useToast'
 import { companiesApi, contactsApi, dealsApi, leadsApi, usersApi } from '../api/endpoints'
 import { indexById, useCollection } from '../hooks/useCollection'
+import { ROLES, useAuth } from '../auth/auth-context'
 import { DEAL_STAGES } from '../constants/enums'
 import { formatDate, formatMoney, formatMoneyCompact } from '../utils/format'
 
 export default function Deals() {
+  const { seesEverything, isLeadership, user: me } = useAuth()
   const deals = useCollection(dealsApi)
   const companies = useCollection(companiesApi)
   const contacts = useCollection(contactsApi)
   const leads = useCollection(leadsApi)
-  const users = useCollection(usersApi)
+  const users = useCollection(usersApi, { enabled: seesEverything })
   const toast = useToast()
 
   const [view, setView] = useState('board')
@@ -75,6 +77,14 @@ export default function Deals() {
     },
   ]
 
+  // A rep sees only their own records, so an Owner column carries no
+  // information - and the user list it needs is manager-only.
+  const visibleColumns = seesEverything ? columns : columns.filter((c) => c.key !== 'userId')
+  // Same rule as leads and accounts: a manager cannot hand a deal upwards.
+  const assignableUsers = users.items.filter(
+    (user) => isLeadership || user.userRole !== ROLES.LEADERSHIP || user.id === me?.id,
+  )
+
   const fields = [
     { name: 'dealName', label: 'Deal name', type: 'text', required: true, span: 'full' },
     {
@@ -91,19 +101,25 @@ export default function Deals() {
       type: 'select',
       valueType: 'number',
       required: true,
-      options: leads.items.map((lead) => ({ value: lead.id, label: `${lead.leadName} · ${lead.status}` })),
+      // A deal comes from a lead at the same company, so only those are offered.
+      options: (values) =>
+        leads.items
+          .filter((lead) => String(lead.companyId) === String(values.companyId))
+          .map((lead) => ({ value: lead.id, label: `${lead.leadName} · ${lead.status}` })),
+      hint: 'Leads at the selected company.',
     },
     {
       name: 'contactId',
       label: 'Contact',
       type: 'select',
       valueType: 'number',
-      options: contacts.items.map((contact) => ({
-        value: contact.id,
-        label: `${contact.contactName} · ${companyName(contact.companyId)}`,
-      })),
+      // Same rule: a contact belongs to one company.
+      options: (values) =>
+        contacts.items
+          .filter((contact) => String(contact.companyId) === String(values.companyId))
+          .map((contact) => ({ value: contact.id, label: contact.contactName })),
       placeholder: 'None',
-      hint: 'Optional.',
+      hint: 'Optional. Lists contacts at the selected company.',
     },
     {
       name: 'userId',
@@ -111,12 +127,11 @@ export default function Deals() {
       type: 'select',
       valueType: 'number',
       required: true,
-      options: users.items.map((user) => ({ value: user.id, label: user.name })),
+      options: assignableUsers.map((user) => ({ value: user.id, label: `${user.name} · ${user.userRole}` })),
     },
     { name: 'stage', label: 'Stage', type: 'select', options: DEAL_STAGES, required: true, defaultValue: 'Prospecting' },
     { name: 'dealValue', label: 'Value (USD)', type: 'money', min: 0, required: true, defaultValue: '0' },
     { name: 'expectedCloseDate', label: 'Expected close date', type: 'date', required: true },
-    { name: 'isActive', label: 'Active', type: 'checkbox', defaultValue: true, hint: 'Unchecking archives the deal.' },
   ]
 
   const ready = companies.items.length && leads.items.length && users.items.length
@@ -128,11 +143,13 @@ export default function Deals() {
       entityName="deal"
       collection={deals}
       rows={rows}
-      columns={columns}
+      columns={visibleColumns}
       fields={fields}
       labelOf={(row) => row.dealName}
       searchText={(row) => `${row.dealName} ${row.stage} ${companyName(row.companyId)} ${ownerName(row.userId)}`}
       initialSort={{ key: 'dealValue', direction: 'desc' }}
+      canCreate={seesEverything}
+      canDelete={seesEverything}
       createDisabled={!deals.loading && !ready}
       createDisabledReason="Deals need an existing company, lead and owner."
       alternateActive={view === 'board'}
@@ -146,7 +163,7 @@ export default function Deals() {
           </button>
         </div>
       }
-      filters={
+      filters={seesEverything ? (
         <FilterSelect
           label="Owner"
           value={owner}
@@ -154,7 +171,7 @@ export default function Deals() {
           options={users.items.map((user) => ({ value: String(user.id), label: user.name }))}
           allLabel="All owners"
         />
-      }
+      ) : undefined}
       renderAlternate={({ rows: visible, edit, remove, query, setQuery, filters }) => (
         <section className="panel panel--flush">
           <Toolbar>
@@ -209,16 +226,20 @@ export default function Deals() {
                           <p className="deal-card__company">{companyName(deal.companyId)}</p>
                           <p className="deal-card__value">{formatMoney(deal.dealValue)}</p>
                           <footer>
-                            <span title={`Owner: ${ownerName(deal.userId)}`}>{ownerName(deal.userId)}</span>
+                            {seesEverything && (
+                              <span title={`Owner: ${ownerName(deal.userId)}`}>{ownerName(deal.userId)}</span>
+                            )}
                             <span>{formatDate(deal.expectedCloseDate)}</span>
                           </footer>
                           <div className="deal-card__actions">
                             <Button size="sm" onClick={() => edit(deal)}>
                               Edit
                             </Button>
-                            <Button size="sm" variant="ghost-danger" onClick={() => remove(deal)}>
-                              Delete
-                            </Button>
+                            {seesEverything && (
+                              <Button size="sm" variant="ghost-danger" onClick={() => remove(deal)}>
+                                Delete
+                              </Button>
+                            )}
                           </div>
                         </article>
                       ))}

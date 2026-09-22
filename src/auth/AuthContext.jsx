@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../api/client'
-import { clearSession, getStoredUser, getToken, onSessionEnded, saveSession } from './session'
+import { clearSession, getStoredUser, getToken, onSessionEnded, saveSession, saveUser } from './session'
 import { AuthCtx, ROLES } from './auth-context'
 
 export function AuthProvider({ children }) {
@@ -47,6 +47,15 @@ export function AuthProvider({ children }) {
     return result.user
   }, [])
 
+  // Re-reads the signed-in user from the API, e.g. after editing your own
+  // details, so the sidebar and role gates reflect the change immediately.
+  const refreshUser = useCallback(async () => {
+    const me = await api.get('/Auth/me')
+    saveUser(me)
+    setUser(me)
+    return me
+  }, [])
+
   const logout = useCallback(() => {
     // Logging out is a client-side act: the token is discarded. It stays
     // technically valid until it expires, which is why the lifetime is short.
@@ -60,10 +69,11 @@ export function AuthProvider({ children }) {
       ready,
       login,
       logout,
+      refreshUser,
       isLeadership: user?.userRole === ROLES.LEADERSHIP,
       seesEverything: Boolean(user?.seesEverything),
     }),
-    [user, ready, login, logout],
+    [user, ready, login, logout, refreshUser],
   )
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>
